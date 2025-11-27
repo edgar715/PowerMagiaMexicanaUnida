@@ -1,15 +1,28 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
 
-// RUTA FIJA Y PERMANENTE EN RENDER (esta nunca se borra)
-const executablePath = '/opt/render/project/.chrome/chrome-linux/chrome';
-console.log('Chrome path:', executablePath);
+// DETECCIÓN AUTOMÁTICA DE CHROME (funciona con cualquier versión instalada)
+let executablePath = process.env.CHROME_EXECUTABLE_PATH;
 
-// Verificación rápida por si algo sale mal (opcional pero útil)
-if (!require('fs').existsSync(executablePath)) {
-  console.error('¡ERROR! Chrome no está instalado en la ruta esperada.');
-  console.error('Asegúrate de tener este Build Command:');
-  console.error('npm install && npx puppeteer browsers install chrome-stable --path /opt/render/project/.chrome');
-  process.exit(1);
+if (!executablePath) {
+  const chromeBaseDir = '/opt/render/project/.chrome/chrome';  // Base según logs de Render
+  try {
+    console.log('Buscando versiones de Chrome en:', chromeBaseDir);
+    const versionFolders = fs.readdirSync(chromeBaseDir).filter(f => f.startsWith('linux-'));
+    if (versionFolders.length === 0) {
+      throw new Error('No se encontraron carpetas linux-* en ' + chromeBaseDir);
+    }
+    const latestVersion = versionFolders.sort().reverse()[0];  // La más reciente
+    executablePath = path.join(chromeBaseDir, latestVersion, 'chrome-linux64', 'chrome');
+    console.log('Chrome detectado en:', executablePath);
+  } catch (err) {
+    console.error('Error detectando Chrome:', err.message);
+    console.error('Verifica que el Build Command sea: npm install && npx puppeteer browsers install chrome --path /opt/render/project/.chrome');
+    process.exit(1);
+  }
+} else {
+  console.log('Usando Chrome desde env var:', executablePath);
 }
 
 (async () => {
@@ -41,7 +54,7 @@ if (!require('fs').existsSync(executablePath)) {
 
     const token = process.env.TOKEN?.trim();
     if (!token) {
-      console.error('FALTA EL TOKEN → Ve a Render → Environment → agrega KEY: TOKEN con tu token real');
+      console.error('FALTA EL TOKEN → Ve a Render → Environment → agrega KEY: TOKEN con tu token real de https://www.haxball.com/headlesstoken');
       process.exit(1);
     }
 
@@ -61,7 +74,7 @@ if (!require('fs').existsSync(executablePath)) {
 
     await page.evaluate(() => {
       const room = window.HBInit({
-        roomName: "Power Magia Mexicana Unida",
+        roomName: "Power Magia Mexicana Unida ⚽🇲🇽",
         maxPlayers: 16,
         public: true,
         noPlayer: true,
