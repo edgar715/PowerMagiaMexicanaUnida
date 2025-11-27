@@ -1,19 +1,17 @@
 {
   "name": "powermagiamexicanaunida",
   "version": "1.0.0",
-  "description": "Sala de Haxball headless - Power Magia Mexicana Unida",
+  "description": "Sala de Haxball headless oficial con Puppeteer",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "puppeteer": "latest",
-    "haxball.js": "latest"
+    "puppeteer": "latest"
   },
   "engines": {
-    "node": ">=18.x"
+    "node": ">=20.x"
   },
   "author": "",
-  "license": "ISC",
-  "type": "commonjs"
+  "license": "ISC"
 }
