@@ -1,17 +1,37 @@
-const Haxball = require('haxball-headless');
+const HaxballJS = require("haxball.js");
 
-Haxball.room.create({
-  name: "Mi Sala Render",
-  password: "",           // deja "" si no quieres contraseña
-  maxPlayers: 16,
-  public: true,
-  noPlayer: false,
-  token: "thr1.AAAAAGkoya1OrNKsIdxSFw.aArhywpn-yo"   // OBLIGATORIO: consigue tu token en https://www.haxball.com/headlesstoken
-}, (room) => {
-  console.log("Sala creada! Link:", room.link);
+HaxballJS().then((HBInit) => {
+  // Configuración de la sala (igual que el oficial)
+  const room = HBInit({
+    roomName: "Power Magia Mexicana Unida ⚽🇲🇽",  // Nombre de tu sala
+    maxPlayers: 16,
+    public: true,      // true = pública en el lobby
+    noPlayer: true,    // true = sin jugador admin visible
+    token: "TU_TOKEN_AQUI",  // ¡CAMBIAR! Ve a https://www.haxball.com/headlesstoken
+    // Opcional: password: "tucontraseña" si quieres privada
+  });
 
-  // Aquí puedes poner tus eventos (onPlayerJoin, etc.)
-  room.onPlayerJoin = (player) => {
-    console.log(player.name + " entró");
+  // Eventos básicos (opcional, pero útiles)
+  room.onRoomLink = (link) => {
+    console.log("¡Sala creada! Link para unirte:", link);
   };
+
+  room.onPlayerJoin = (player) => {
+    console.log(`${player.name} se unió a la sala!`);
+  };
+
+  room.onPlayerLeave = (player) => {
+    console.log(`${player.name} dejó la sala.`);
+  };
+
+  // Configuraciones de juego (ejemplo básico)
+  room.setDefaultStadium("Big");  // Estadio grande
+  room.setScoreLimit(7);          // Primer equipo a 7 gana
+  room.setTimeLimit(0);           // Sin límite de tiempo
+  room.setCustomStadium("");      // Deja vacío para default
+
+  console.log("Servidor Haxball iniciado correctamente. Esperando jugadores...");
+}).catch((error) => {
+  console.error("Error al iniciar la sala:", error);
+  process.exit(1);
 });

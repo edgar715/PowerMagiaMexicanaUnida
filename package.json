@@ -7,7 +7,8 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "haxball-headless": "latest"
+    "puppeteer": "latest",
+    "haxball.js": "latest"
   },
   "engines": {
     "node": ">=18.x"
