@@ -1,26 +1,29 @@
 const puppeteer = require('puppeteer');
-
 const fs = require('fs');
 const path = require('path');
-const chromeDir = '/tmp/chrome/chrome';
-let executablePath = process.env.CHROME_EXECUTABLE_PATH;
-if (!executablePath) {
-  const versions = fs.readdirSync(chromeDir).filter(dir => dir.startsWith('linux-'));
-  if (versions.length > 0) {
-    const versionDir = versions[0];  // Toma la primera (la más reciente)
-    executablePath = path.join(chromeDir, versionDir, 'chrome-linux64', 'chrome');
-  } else {
-    throw new Error('No Chrome version found in /tmp/chrome/chrome');
-  }
-}
-console.log('Chrome path detectado:', executablePath);
 
-// ← RUTA EXACTA de tus logs (cambia si la versión de Chrome varía en futuro deploys)
-const executablePath = process.env.CHROME_EXECUTABLE_PATH || '/tmp/chrome/chrome/linux-131.0.6778.204/chrome-linux64/chrome';
+// DETECCIÓN AUTOMÁTICA DE CHROME (funciona siempre, aunque cambie la versión)
+let executablePath = process.env.CHROME_EXECUTABLE_PATH;
+
+if (!executablePath) {
+  const chromeBaseDir = '/tmp/chrome/chrome';
+  try {
+    const versionFolders = fs.readdirSync(chromeBaseDir).filter(f => f.startsWith('linux-'));
+    if (versionFolders.length === 0) throw new Error('No se encontró carpeta linux-*');
+    const latestVersion = versionFolders.sort().reverse()[0]; // la más nueva
+    executablePath = path.join(chromeBaseDir, latestVersion, 'chrome-linux64', 'chrome');
+    console.log('Chrome detectado automáticamente en:', executablePath);
+  } catch (err) {
+    console.error('No se pudo detectar Chrome automáticamente:', err.message);
+    process.exit(1);
+  }
+} else {
+  console.log('Usando Chrome desde variable de entorno:', executablePath);
+}
 
 (async () => {
   try {
-    console.log('Iniciando navegador con Chrome en:', executablePath);
+    console.log('Iniciando Puppeteer con Chrome...');
 
     const browser = await puppeteer.launch({
       headless: 'new',
@@ -30,50 +33,41 @@ const executablePath = process.env.CHROME_EXECUTABLE_PATH || '/tmp/chrome/chrome
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--disable-features=IsolateOrigins,site-per-process',
         '--no-first-run',
         '--single-process',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
+        '--disable-renderer-backgrounding',
+        '--disable-features=IsolateOrigins,site-per-process'
       ],
       timeout: 90000
     });
 
     const page = await browser.newPage();
 
-    // Debug del navegador
     page.on('console', msg => console.log('BROWSER:', msg.text()));
     page.on('pageerror', err => console.error('BROWSER ERROR:', err));
 
-    // TOKEN desde variables de entorno (OBLIGATORIO)
     const token = process.env.TOKEN?.trim();
     if (!token) {
-      console.error('ERROR: No hay TOKEN. Agrégalo en Environment Variables de Render');
+      console.error('FALTA EL TOKEN → Agrégalo en Environment Variables de Render');
       process.exit(1);
     }
 
-    console.log('Cargando Haxball headless...');
+    console.log('Cargando página headless de Haxball...');
     await page.goto(`https://www.haxball.com/headless#${token}`);
 
-    // Espera a que cargue HBInit
     await page.waitForFunction('typeof window.HBInit === "function"', { timeout: 40000 });
 
-    // Funciones que el navegador llama desde Node.js
+    // Exponer funciones al navegador
     await page.exposeFunction('log', (...args) => console.log('ROOM:', ...args));
-    await page.exposeFunction('onRoomLink', (link) => {
-      console.log('¡SALA CREADA! Enlace para entrar:', link);
-      console.log('Comparte este link →', link);
+    await page.exposeFunction('onRoomLink', link => {
+      console.log('¡SALA CREADA! →', link);
+      console.log('Comparte este enlace:', link);
     });
-    await page.exposeFunction('onPlayerJoin', (player) => {
-      console.log(`${player.name} se unió (ID: ${player.id})`);
-    });
-    await page.exposeFunction('onPlayerLeave', (player) => {
-      console.log(`${player.name} salió de la sala`);
-    });
-    await page.exposeFunction('onPlayerChat', (player, msg) => {
-      console.log(`[${player.name}]: ${msg}`);
-    });
+    await page.exposeFunction('onPlayerJoin', p => console.log(`${p.name} entró (ID: ${p.id})`));
+    await page.exposeFunction('onPlayerLeave', p => console.log(`${p.name} salió`));
+    await page.exposeFunction('onPlayerChat', (p, msg) => console.log(`[${p.name}]: ${msg}`));
 
     // CREAR LA SALA
     await page.evaluate(() => {
@@ -82,8 +76,7 @@ const executablePath = process.env.CHROME_EXECUTABLE_PATH || '/tmp/chrome/chrome
         maxPlayers: 16,
         public: true,
         noPlayer: true,
-        // password: "1234",        // ← descomenta y cambia si quieres contraseña
-        token: null,                 // ya viene en la URL
+        // password: "1234",   // descomenta si quieres contraseña
       });
 
       room.onRoomLink = window.onRoomLink;
@@ -91,23 +84,21 @@ const executablePath = process.env.CHROME_EXECUTABLE_PATH || '/tmp/chrome/chrome
       room.onPlayerLeave = window.onPlayerLeave;
       room.onPlayerChat = window.onPlayerChat;
 
-      // Configuración del partido
       room.setDefaultStadium("Big");
       room.setScoreLimit(7);
-      room.setTimeLimit(0);           // infinito
+      room.setTimeLimit(0);
       room.setTeamsLock(false);
 
-      window.log('¡Sala 100% configurada y activa!');
+      window.log('¡Power Magia Mexicana Unida está ON FIRE!');
     });
 
-    console.log('Servidor Haxball 24/7 activo y funcionando correctamente');
-    console.log('La sala aparecerá en el lobby público en unos segundos...');
+    console.log('SERVIDOR 24/7 ACTIVO CORRECTAMENTE');
+    console.log('La sala aparecerá en el lobby público en segundos...');
 
-    // Mantiene el proceso vivo
-    process.stdin.resume();
+    process.stdin.resume(); // mantiene vivo el proceso
 
   } catch (err) {
-    console.error('ERROR CRÍTICO:', err);
+    console.error('ERROR FATAL:', err);
     process.exit(1);
   }
 })();
