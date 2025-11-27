@@ -1,25 +1,15 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
 
-// DETECCIÓN AUTOMÁTICA CORRECTA (Render instala aquí)
-let executablePath = process.env.CHROME_EXECUTABLE_PATH;
+// RUTA FIJA Y PERMANENTE EN RENDER (esta nunca se borra)
+const executablePath = '/opt/render/project/.chrome/chrome-linux/chrome';
+console.log('Chrome path:', executablePath);
 
-if (!executablePath) {
-  const chromeBaseDir = '/tmp/chrome/chrome';   // ← ¡¡esta es la ruta real!!
-  try {
-    const versionFolders = fs.readdirSync(chromeBaseDir)
-      .filter(f => f.startsWith('linux-'));
-    if (versionFolders.length === 0) throw new Error('No hay carpetas linux-*');
-    const latestVersion = versionFolders.sort().reverse()[0];
-    executablePath = path.join(chromeBaseDir, latestVersion, 'chrome-linux64', 'chrome');
-    console.log('Chrome detectado en:', executablePath);
-  } catch (err) {
-    console.error('Error detectando Chrome:', err.message);
-    process.exit(1);
-  }
-} else {
-  console.log('Usando Chrome desde variable de entorno:', executablePath);
+// Verificación rápida por si algo sale mal (opcional pero útil)
+if (!require('fs').existsSync(executablePath)) {
+  console.error('¡ERROR! Chrome no está instalado en la ruta esperada.');
+  console.error('Asegúrate de tener este Build Command:');
+  console.error('npm install && npx puppeteer browsers install chrome-stable --path /opt/render/project/.chrome');
+  process.exit(1);
 }
 
 (async () => {
@@ -51,16 +41,15 @@ if (!executablePath) {
 
     const token = process.env.TOKEN?.trim();
     if (!token) {
-      console.error('FALTA EL TOKEN → Agrégalo en Environment Variables de Render');
+      console.error('FALTA EL TOKEN → Ve a Render → Environment → agrega KEY: TOKEN con tu token real');
       process.exit(1);
     }
 
-    console.log('Cargando página headless de Haxball...');
+    console.log('Cargando Haxball headless...');
     await page.goto(`https://www.haxball.com/headless#${token}`);
 
     await page.waitForFunction('typeof window.HBInit === "function"', { timeout: 40000 });
 
-    // Exponer funciones al navegador
     await page.exposeFunction('log', (...args) => console.log('ROOM:', ...args));
     await page.exposeFunction('onRoomLink', link => {
       console.log('¡SALA CREADA! →', link);
@@ -70,14 +59,13 @@ if (!executablePath) {
     await page.exposeFunction('onPlayerLeave', p => console.log(`${p.name} salió`));
     await page.exposeFunction('onPlayerChat', (p, msg) => console.log(`[${p.name}]: ${msg}`));
 
-    // CREAR LA SALA
     await page.evaluate(() => {
       const room = window.HBInit({
         roomName: "Power Magia Mexicana Unida",
         maxPlayers: 16,
         public: true,
         noPlayer: true,
-        // password: "1234",   // descomenta si quieres contraseña
+        // password: "1234",   // descomenta si quieres privada
       });
 
       room.onRoomLink = window.onRoomLink;
@@ -96,7 +84,7 @@ if (!executablePath) {
     console.log('SERVIDOR 24/7 ACTIVO CORRECTAMENTE');
     console.log('La sala aparecerá en el lobby público en segundos...');
 
-    process.stdin.resume(); // mantiene vivo el proceso
+    process.stdin.resume();
 
   } catch (err) {
     console.error('ERROR FATAL:', err);
