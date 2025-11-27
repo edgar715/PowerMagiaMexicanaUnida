@@ -2,19 +2,20 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// DETECCIÓN AUTOMÁTICA DE CHROME (funciona siempre, aunque cambie la versión)
+// DETECCIÓN AUTOMÁTICA CORRECTA (Render instala aquí)
 let executablePath = process.env.CHROME_EXECUTABLE_PATH;
 
 if (!executablePath) {
-  const chromeBaseDir = '/tmp/chrome/chrome';
+  const chromeBaseDir = '/tmp/chrome';  // ¡¡ESTA ES LA RUTA REAL!!
   try {
-    const versionFolders = fs.readdirSync(chromeBaseDir).filter(f => f.startsWith('linux-'));
-    if (versionFolders.length === 0) throw new Error('No se encontró carpeta linux-*');
-    const latestVersion = versionFolders.sort().reverse()[0]; // la más nueva
+    const versionFolders = fs.readdirSync(chromeBaseDir)
+      .filter(f => f.startsWith('linux-'));
+    if (versionFolders.length === 0) throw new Error('No hay carpetas linux-*');
+    const latestVersion = versionFolders.sort().reverse()[0];
     executablePath = path.join(chromeBaseDir, latestVersion, 'chrome-linux64', 'chrome');
-    console.log('Chrome detectado automáticamente en:', executablePath);
+    console.log('Chrome detectado en:', executablePath);
   } catch (err) {
-    console.error('No se pudo detectar Chrome automáticamente:', err.message);
+    console.error('Error detectando Chrome:', err.message);
     process.exit(1);
   }
 } else {
