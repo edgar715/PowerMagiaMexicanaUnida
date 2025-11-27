@@ -6,7 +6,7 @@ const path = require('path');
 let executablePath = process.env.CHROME_EXECUTABLE_PATH;
 
 if (!executablePath) {
-  const chromeBaseDir = '/tmp/chrome';  // ¡¡ESTA ES LA RUTA REAL!!
+  const chromeBaseDir = '/tmp/chrome/chrome';   // ← ¡¡esta es la ruta real!!
   try {
     const versionFolders = fs.readdirSync(chromeBaseDir)
       .filter(f => f.startsWith('linux-'));
