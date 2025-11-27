@@ -7,7 +7,7 @@ HaxballJS().then((HBInit) => {
     maxPlayers: 16,
     public: true,      // true = pública en el lobby
     noPlayer: true,    // true = sin jugador admin visible
-    token: "TU_TOKEN_AQUI",  // ¡CAMBIAR! Ve a https://www.haxball.com/headlesstoken
+    token: "thr1.AAAAAGkoya1OrNKsIdxSFw.aArhywpn-yo",  // ¡CAMBIAR! Ve a https://www.haxball.com/headlesstoken
     // Opcional: password: "tucontraseña" si quieres privada
   });
 
