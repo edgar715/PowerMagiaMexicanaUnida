@@ -1,22 +1,18 @@
 {
   "name": "powermagiamexicanaunida",
   "version": "1.0.0",
-  "description": "",
+  "description": "Sala de Haxball headless - Power Magia Mexicana Unida",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/edgar715/PowerMagiaMexicanaUnida.git"
+  "dependencies": {
+    "haxball-headless": "latest"
   },
-  "keywords": [],
+  "engines": {
+    "node": ">=18.x"
+  },
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/edgar715/PowerMagiaMexicanaUnida/issues"
-  },
-  "homepage": "https://github.com/edgar715/PowerMagiaMexicanaUnida#readme"
+  "type": "commonjs"
 }
