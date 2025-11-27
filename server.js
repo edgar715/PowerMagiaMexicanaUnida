@@ -1,15 +1,30 @@
 const puppeteer = require('puppeteer');
 
-// ← CLAVE: ruta donde instalamos Chrome con el nuevo comando de build
-const executablePath = process.env.CHROME_EXECUTABLE_PATH || '/tmp/chrome/linux-*/chrome-linux64/chrome';
+const fs = require('fs');
+const path = require('path');
+const chromeDir = '/tmp/chrome/chrome';
+let executablePath = process.env.CHROME_EXECUTABLE_PATH;
+if (!executablePath) {
+  const versions = fs.readdirSync(chromeDir).filter(dir => dir.startsWith('linux-'));
+  if (versions.length > 0) {
+    const versionDir = versions[0];  // Toma la primera (la más reciente)
+    executablePath = path.join(chromeDir, versionDir, 'chrome-linux64', 'chrome');
+  } else {
+    throw new Error('No Chrome version found in /tmp/chrome/chrome');
+  }
+}
+console.log('Chrome path detectado:', executablePath);
+
+// ← RUTA EXACTA de tus logs (cambia si la versión de Chrome varía en futuro deploys)
+const executablePath = process.env.CHROME_EXECUTABLE_PATH || '/tmp/chrome/chrome/linux-131.0.6778.204/chrome-linux64/chrome';
 
 (async () => {
   try {
-    console.log('Iniciando navegador con Chrome instalado en /tmp/chrome...');
+    console.log('Iniciando navegador con Chrome en:', executablePath);
 
     const browser = await puppeteer.launch({
       headless: 'new',
-      executablePath,                                      // ← esta línea arregla el error anterior
+      executablePath,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
