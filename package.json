@@ -1,17 +1,17 @@
 {
   "name": "powermagiamexicanaunida",
   "version": "1.0.0",
-  "description": "Haxball headless oficial en Render",
+  "description": "Haxball headless oficial en Render con Puppeteer simple",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "puppeteer": "^23.6.0",
-    "@puppeteer/browsers": "latest",
-    "puppeteer-cluster": "latest"
+    "puppeteer": "^23.11.1"
   },
   "engines": {
     "node": ">=20.x"
-  }
+  },
+  "author": "",
+  "license": "ISC"
 }
