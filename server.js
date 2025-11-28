@@ -2,27 +2,25 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// DETECCIÓN AUTOMÁTICA DE CHROME (funciona con cualquier versión instalada)
+// DETECCIÓN AUTOMÁTICA DE CHROME (de tus logs, funciona)
 let executablePath = process.env.CHROME_EXECUTABLE_PATH;
 
 if (!executablePath) {
-  const chromeBaseDir = '/opt/render/project/.chrome/chrome';  // Base según logs de Render
+  const chromeBaseDir = '/opt/render/project/.chrome/chrome';
   try {
     console.log('Buscando versiones de Chrome en:', chromeBaseDir);
     const versionFolders = fs.readdirSync(chromeBaseDir).filter(f => f.startsWith('linux-'));
     if (versionFolders.length === 0) {
       throw new Error('No se encontraron carpetas linux-* en ' + chromeBaseDir);
     }
-    const latestVersion = versionFolders.sort().reverse()[0];  // La más reciente
+    const latestVersion = versionFolders.sort().reverse()[0];
     executablePath = path.join(chromeBaseDir, latestVersion, 'chrome-linux64', 'chrome');
     console.log('Chrome detectado en:', executablePath);
   } catch (err) {
     console.error('Error detectando Chrome:', err.message);
-    console.error('Verifica que el Build Command sea: npm install && npx puppeteer browsers install chrome --path /opt/render/project/.chrome');
+    console.error('Verifica Build Command: npm install && npx puppeteer browsers install chrome --path /opt/render/project/.chrome');
     process.exit(1);
   }
-} else {
-  console.log('Usando Chrome desde env var:', executablePath);
 }
 
 (async () => {
@@ -49,12 +47,14 @@ if (!executablePath) {
 
     const page = await browser.newPage();
 
-    page.on('console', msg => console.log('BROWSER:', msg.text()));
+    // DEBUG MEJORADO: Captura TODO del navegador
+    page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
     page.on('pageerror', err => console.error('BROWSER ERROR:', err));
+    page.on('requestfailed', req => console.error('REQUEST FAILED:', req.url(), req.failure()));
 
     const token = process.env.TOKEN?.trim();
     if (!token) {
-      console.error('FALTA EL TOKEN → Ve a Render → Environment → agrega KEY: TOKEN con tu token real de https://www.haxball.com/headlesstoken');
+      console.error('FALTA TOKEN → Render > Environment > TOKEN = tu token de https://www.haxball.com/headlesstoken');
       process.exit(1);
     }
 
@@ -63,39 +63,61 @@ if (!executablePath) {
 
     await page.waitForFunction('typeof window.HBInit === "function"', { timeout: 40000 });
 
-    await page.exposeFunction('log', (...args) => console.log('ROOM:', ...args));
+    // Exponer funciones (MEJORADO: onRoomLink ahora se expone ANTES de crear la sala)
     await page.exposeFunction('onRoomLink', link => {
-      console.log('¡SALA CREADA! →', link);
-      console.log('Comparte este enlace:', link);
+      console.log('🎉 ¡SALA CREADA! Link directo:', link);
+      console.log('Comparte este link con tus compas →', link);
     });
-    await page.exposeFunction('onPlayerJoin', p => console.log(`${p.name} entró (ID: ${p.id})`));
-    await page.exposeFunction('onPlayerLeave', p => console.log(`${p.name} salió`));
-    await page.exposeFunction('onPlayerChat', (p, msg) => console.log(`[${p.name}]: ${msg}`));
+    await page.exposeFunction('log', (...args) => console.log('ROOM LOG:', ...args));
+    await page.exposeFunction('onPlayerJoin', p => console.log('⚽ JUGADOR ENTRÓ:', p.name, '(ID:', p.id, ')'));
+    await page.exposeFunction('onPlayerLeave', p => console.log('👋 JUGADOR SALIÓ:', p.name));
+    await page.exposeFunction('onPlayerChat', (p, msg) => console.log('💬 CHAT:', p.name, ':', msg));
 
+    // CREAR LA SALA (MEJORADO: Expone onRoomLink en el config)
     await page.evaluate(() => {
-      const room = window.HBInit({
+      window.HBInit({
         roomName: "Power Magia Mexicana Unida ⚽🇲🇽",
         maxPlayers: 16,
         public: true,
         noPlayer: true,
-        // password: "1234",   // descomenta si quieres privada
+        // password: "1234",   // descomenta si privada
+        onRoomLink: window.onRoomLink,  // ← CLAVE: Ahora usa la función expuesta
       });
+    });
 
-      room.onRoomLink = window.onRoomLink;
-      room.onPlayerJoin = window.onPlayerJoin;
-      room.onPlayerLeave = window.onPlayerLeave;
-      room.onPlayerChat = window.onPlayerChat;
+    // ESPERA EXTRA para que onRoomLink dispare (Haxball tarda ~10-30s)
+    console.log('Sala creada, esperando link... (puede tardar 30s)');
+    await page.waitForTimeout(30000);
 
-      room.setDefaultStadium("Big");
-      room.setScoreLimit(7);
-      room.setTimeLimit(0);
-      room.setTeamsLock(false);
+    // FALLBACK: Si no disparó onRoomLink, extrae el link de la página
+    const roomLink = await page.evaluate(() => {
+      const iframe = document.querySelector('iframe');
+      if (iframe && iframe.src) {
+        const match = iframe.src.match(/a=([^&]+)/);
+        return match ? `https://www.haxball.com/play?${match[0]}` : null;
+      }
+      return null;
+    });
+    if (roomLink) {
+      console.log('🔧 FALLBACK: Link extraído manualmente:', roomLink);
+      console.log('Comparte este link →', roomLink);
+    }
 
-      window.log('¡Power Magia Mexicana Unida está ON FIRE!');
+    // Configuraciones (después de crear, para no interferir)
+    await page.evaluate(() => {
+      const room = window.room || window.HBInit;  // Asegura acceso al room
+      if (room && typeof room.setDefaultStadium === 'function') {
+        room.setDefaultStadium("Big");
+        room.setScoreLimit(7);
+        room.setTimeLimit(0);
+        room.setTeamsLock(false);
+        window.log('¡Configuraciones aplicadas! Sala ON FIRE!');
+      }
     });
 
     console.log('SERVIDOR 24/7 ACTIVO CORRECTAMENTE');
-    console.log('La sala aparecerá en el lobby público en segundos...');
+    console.log('Revisa logs para el link. Si no aparece en lobby, espera 2-5 min o invita manual.');
+    console.log('Tip: Usa UptimeRobot para pingear tu URL de Render cada 10 min (evita sleep).');
 
     process.stdin.resume();
 
