@@ -1,12 +1,13 @@
 {
-  "name": "powermagiamexicanaunida",
+  "name": "powermagia",
   "version": "1.0.0",
   "main": "server.js",
+  "license": "MIT",
+  "type": "commonjs",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.0",
-    "puppeteer": "^22.0.0"
+    "haxball-headless-browser": "^1.2.0"
   }
 }
