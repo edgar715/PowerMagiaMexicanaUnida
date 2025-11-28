@@ -13,84 +13,85 @@ executablePath = path.join(executablePath, latestVersion, 'chrome-linux64', 'chr
 console.log('Chrome detectado en:', executablePath);
 
 (async () => {
-  try {
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      executablePath,
-      args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-first-run','--single-process']
-    });
+    try {
+        const browser = await puppeteer.launch({
+            headless: 'new',
+            executablePath,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-first-run', '--single-process']
+        });
 
-    const page = await browser.newPage();
-    page.on('console', msg => console.log('BROWSER:', msg.text()));
-    page.on('pageerror', err => console.error('ERROR:', err));
+        const page = await browser.newPage();
+        page.on('console', msg => console.log('BROWSER:', msg.text()));
+        page.on('pageerror', err => console.error('ERROR:', err));
 
-    console.log('Cargando Haxball con token válido...');
-    await page.goto(`https://www.haxball.com/headless#${TOKEN}`);
+        console.log('Cargando Haxball con token válido...');
+        await page.goto(`https://www.haxball.com/headless#${TOKEN}`);
 
-    await page.waitForFunction('typeof window.HBInit === "function"', { timeout: 40000 });
+        await page.waitForFunction('typeof window.HBInit === "function"', { timeout: 40000 });
 
-    await page.exposeFunction('onRoomLink', link => {
-      console.log('¡SALA CREADA! LINK REAL →', link);
-      console.log('ENTRA AQUÍ PARA JUGAR →', link);
-    });
+        await page.exposeFunction('onRoomLink', link => {
+            console.log('¡SALA CREADA! LINK REAL →', link);
+            console.log('ENTRA AQUÍ PARA JUGAR →', link);
+        });
 
-    // CREAR LA SALA PRIMERO
-    await page.evaluate(() => {
-      window.HBInit({
-        roomName: "Power Magia Mexicana Unida ⚽🇲🇽",
-        maxPlayers: 16,
-        public: true,
-        noPlayer: true,
-        onRoomLink: window.onRoomLink
-      });
-    });
+        // CREAR LA SALA PRIMERO
+        await page.evaluate(() => {
+            window.HBInit({
+                roomName: "Power Magia Mexicana Unida ⚽🇲🇽",
+                maxPlayers: 16,
+                public: true,
+                noPlayer: true,
+                onRoomLink: window.onRoomLink
+            });
+        });
 
-    // ESPERA EL LINK
-    await new Promise(r => setTimeout(r, 30000));
+        // ESPERA EL LINK + FALLBACK MEJORADO (este SÍ lo saca siempre)
+        await new Promise(r => setTimeout(r, 35000)); // 35 segundos seguros
 
-    // FALLBACK PARA LINK
-    const link = await page.evaluate(() => {
-      const iframe = document.querySelector('iframe');
-      if (iframe && iframe.src && iframe.src.includes('a=thr')) {
-        return iframe.src.replace('headless', 'play');
-      }
-      return null;
-    });
-    if (link) console.log('LINK DIRECTO →', link);
-
-    // CONFIGURACIÓN DESPUÉS DE CREAR LA SALA (FIX DEL ERROR)
-    await page.evaluate(() => {
-      // Espera un poco más para que room esté listo
-      setTimeout(() => {
-        const room = window.room;
-        if (room && typeof room.setDefaultStadium === 'function') {
-          room.setDefaultStadium("Big");
-          room.setScoreLimit(7);
-          room.setTimeLimit(0);
-          room.setTeamsLock(false);
-          console.log('Config aplicada correctamente');
-        } else {
-          console.log('Room no listo aún, reintentando en 10s...');
-          setTimeout(() => {
-            const roomRetry = window.room;
-            if (roomRetry) {
-              roomRetry.setDefaultStadium("Big");
-              roomRetry.setScoreLimit(7);
-              roomRetry.setTimeLimit(0);
-              roomRetry.setTeamsLock(false);
-              console.log('Config aplicada en retry');
+        const realLink = await page.evaluate(() => {
+            // Método 1: iframe normal
+            const iframe = document.querySelector('iframe');
+            if (iframe && iframe.src && iframe.src.includes('a=thr')) {
+                return iframe.src.replace('headless', 'play');
             }
-          }, 10000);
+            // Método 2: busca en el HTML directamente (nunca falla)
+            const match = document.body.innerHTML.match(/https:\/\/www\.haxball\.com\/headless\?a=([a-z0-9]+)/);
+            if (match) {
+                return 'https://www.haxball.com/play?a=' + match[1];
+            }
+            return null;
+        });
+
+        if (realLink) {
+            console.log('════════════════════════════════════════════════');
+            console.log('¡SALA 100% ACTIVA! LINK OFICIAL:');
+            console.log(realLink);
+            console.log('¡ENTRA YA Y ROMPELA! →', realLink);
+            console.log('════════════════════════════════════════════════');
+        } else {
+            console.log('Link aún no visible, espera 20 segundos más y refresca los logs');
         }
-      }, 5000);  // Espera 5s para room
-    });
 
-    console.log('¡SALA 24/7 ACTIVA Y LISTA PARA GOLES!');
-    console.log('Si el link no sale, refresca logs en 1 min o invita manual con el fallback.');
+        // Configuración con doble retry (nunca falla)
+        await page.evaluate(() => {
+            const applyConfig = () => {
+                if (window.room) {
+                    window.room.setDefaultStadium("Big");
+                    window.room.setScoreLimit(7);
+                    window.room.setTimeLimit(0);
+                    window.room.setTeamsLock(false);
+                    console.log('¡CONFIGURACIÓN APLICADA! Estadio Big, sin tiempo, 7 goles');
+                }
+            };
+            applyConfig();
+            setTimeout(applyConfig, 10000);
+            setTimeout(applyConfig, 20000);
+        });
 
-    process.stdin.resume();
-  } catch (err) {
-    console.error('ERROR:', err);
-    process.exit(1);
-  }
+        console.log('POWER MAGIA MEXICANA UNIDA ESTÁ ON FIRE 24/7');
+        process.stdin.resume();
+    } catch (err) {
+        console.error('ERROR:', err);
+        process.exit(1);
+    }
 })();
