@@ -1,13 +1,19 @@
 {
-  "name": "powermagia",
+  "name": "powermagiamexicanaunida",
   "version": "1.0.0",
+  "description": "Servidor headless HaxBall 24/7",
   "main": "server.js",
-  "license": "MIT",
-  "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "npm install"
   },
   "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer": "^22.6.0",
+
     "haxball-headless-browser": "github:mrjvs/haxball-headless-browser"
+  },
+  "engines": {
+    "node": ">=20.x"
   }
 }
