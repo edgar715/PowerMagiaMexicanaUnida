@@ -1,146 +1,92 @@
-const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
+const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
 
 console.log("=== Power Magia Mexicana Unida – Headless Server ===");
 
-// =============================
-// 1. TOKEN
-// =============================
-const TOKEN = process.env.HAXBALL_TOKEN || 'thr1.AAAAAGkpHq1mF4a9tyRYdA.HE2rF-R3FlE';
+// TOKEN
+const TOKEN = process.env.HAXBALL_TOKEN || "thr1.AAAAAGkpHq1mF4a9tyRYdA.HE2rF-R3FlE";
 
-// =============================
-// 2. DETECCIÓN DE CHROME PARA RENDER
-// =============================
+// Detectar Chrome de Render
 function findChrome() {
-    const paths = [
-        '/opt/render/project/.chrome/chrome',
-        '/opt/render/.cache/puppeteer/chrome',
-        '/opt/render/project/.cache/puppeteer/chrome'
-    ];
-
-    for (const base of paths) {
-        try {
-            if (!fs.existsSync(base)) continue;
-
-            const versions = fs.readdirSync(base).filter(f => f.startsWith('linux-'));
-            if (!versions.length) continue;
-
-            const latest = versions.sort().reverse()[0];
-            const chromePath = path.join(base, latest, 'chrome-linux64', 'chrome');
-
-            if (fs.existsSync(chromePath)) {
-                console.log("Chrome encontrado en:", chromePath);
-                return chromePath;
-            }
-        } catch (err) {}
-    }
-
-    throw new Error("❌ NO SE ENCONTRÓ CHROME EN RENDER");
+    const base = "/opt/render/project/.chrome/chrome";
+    const versions = fs.readdirSync(base).filter(f => f.startsWith("linux-"));
+    const latest = versions.sort().reverse()[0];
+    return path.join(base, latest, "chrome-linux64", "chrome");
 }
 
 const executablePath = findChrome();
 
-// =============================
-// 3. INICIO DEL BROWSER
-// =============================
+// =========================================
+// =   LA CLAVE: ESPERAR LA CONEXIÓN       =
+// =========================================
+
+async function waitForHeadlessReady(page) {
+    return await page.waitForFunction(() => {
+        return window.haxballRoomLinkPromise !== undefined;
+    });
+}
+
 (async () => {
     console.log("Iniciando Puppeteer...");
+
     const browser = await puppeteer.launch({
         headless: true,
         executablePath,
-        args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--no-zygote",
-            "--single-process"
-        ]
+        args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
 
-    // =============================
-    // CAPTURA DE LOGS DEL BROWSER
-    // =============================
+    // Capturar logs
     page.on("console", msg => {
-        const txt = msg.text();
-        console.log("BROWSER:", txt);
+        console.log("BROWSER:", msg.text());
+        if (msg.text().startsWith("Room link:")) {
+            const raw = msg.text().replace("Room link:", "").trim();
+            const play = raw.replace("headless", "play");
 
-        if (txt.startsWith("Room link:")) {
-            const headlessURL = txt.replace("Room link:", "").trim();
-            const playURL = headlessURL.replace("headless", "play");
-
-            console.log("\n══════════════════════════════════════");
-            console.log("🔥 ¡SALA CREADA EXITOSAMENTE! 🔥");
-            console.log("LINK PARA ENTRAR →", playURL);
-            console.log("══════════════════════════════════════\n");
+            console.log("\n========== SALA LISTA ==========");
+            console.log("LINK:", play);
+            console.log("================================\n");
         }
     });
 
-    // =============================
-    // 4. CARGAR HAXBALL
-    // =============================
-    console.log("Cargando headless con token...");
+    console.log("Cargando headless...");
     await page.goto(`https://www.haxball.com/headless#${TOKEN}`, {
-        waitUntil: "networkidle0"
+        waitUntil: "domcontentloaded"
     });
 
-    // Esperar que HBInit exista
-    await page.waitForFunction(() => typeof window.HBInit === "function");
+    console.log("Esperando conexión al servidor maestro...");
+    await waitForHeadlessReady(page);
 
-    // =============================
-    // 5. CREAR SALA
-    // =============================
+    console.log("Conectado. Creando sala...");
+
     await page.evaluate(() => {
-
         const room = HBInit({
             roomName: "🇲🇽 POWER MAGIA MEXICANA UNIDA ⚽🔥",
             maxPlayers: 16,
             public: true,
             noPlayer: true,
-
-            // =============================
-            // GEO MONTERREY 🇲🇽
-            // =============================
-            geo: {
-                code: "mx",
-                lat: 25.6866,
-                lon: -100.3161
-            }
+            geo: { code: "mx", lat: 25.6866, lon: -100.3161 }
         });
 
-        room.setDefaultStadium("Big");
-        room.setScoreLimit(7);
-        room.setTimeLimit(0);
+        room.onRoomLink = link => console.log("Room link:", link);
 
         console.log("Sala creada correctamente. Configuración aplicada.");
-
-        // =============================
-        // CAPTURAR ROOM LINK DENTRO DEL NAVEGADOR
-        // =============================
-        room.onRoomLink = (url) => {
-            console.log("Room link:", url);
-        };
     });
 
     console.log("Servidor HaxBall activo 24/7 ✔");
 
-    // Evita que Node se cierre
     process.stdin.resume();
 })();
     
 
-// =====================================================================
-// SERVIDOR HTTP REQUERIDO PARA RENDER (NECESARIO PARA WEB SERVICE GRATIS)
-// =====================================================================
+// Servidor HTTP requerido por Render
 const http = require("http");
 const PORT = process.env.PORT || 10000;
-
 http.createServer((req, res) => {
     res.writeHead(200, {"Content-Type": "text/plain"});
-    res.end("Power Magia Mexicana Unida está corriendo 🔥\n");
+    res.end("Power Magia Mexicana Unida 24/7\n");
 }).listen(PORT, () => {
     console.log("Servidor HTTP para Render activo en el puerto:", PORT);
 });
