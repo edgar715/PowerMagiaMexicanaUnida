@@ -1,7 +1,3 @@
-🚀 1. Crea este archivo: Dockerfile (en la raíz del repo)
-
-(Copia EXACTO todo esto)
-
 # Imagen base con Node + Chrome estable
 FROM ghcr.io/puppeteer/puppeteer:latest
 
