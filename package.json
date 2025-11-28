@@ -8,6 +8,6 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "haxball-headless-browser": "^1.2.0"
+    "haxball-headless-browser": "github:mrjvs/haxball-headless-browser"
   }
 }
