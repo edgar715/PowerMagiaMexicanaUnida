@@ -5,7 +5,7 @@ const path = require("path");
 console.log("=== Power Magia Mexicana Unida – Headless Server ===");
 
 // TOKEN
-const TOKEN = process.env.HAXBALL_TOKEN || "thr1.AAAAAGkpHq1mF4a9tyRYdA.HE2rF-R3FlE";
+const TOKEN = process.env.HAXBALL_TOKEN || "thr1.AAAAAGkpIsmEm1kzbI2IFA.X7Aw1tXD7M0";
 
 // Detectar Chrome de Render
 function findChrome() {
