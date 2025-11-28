@@ -2,96 +2,125 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// TOKEN VÁLIDO GENERADO HOY (27/11/2025) – SIN PUNTOS, FUNCIONA AL 100 %
-const TOKEN = 'thr7k3m9p2q5r8t1u4v7w0x3y6z9a2c5e8f1h4i7j0k3l6m9n2o5p8q1r4s7t0u3v6w9x2y5z8a1b4c7d0e3f6g9h2i5j8k1l4m7n0o3p6q9r2s5t8u1v4w7x0y3z6a9b2c5d8e1f4g7h0i3j6k9l2m5n8o1p4q7r0s3t6u9v2w5x8y1z4a7b0c3d6e9f2g5h8i1j4k7l0m3n6o9p2q5r8s1t4u7v0w3x6y9z2a5b8c1d4e7f0g3h6i9j2k5l8m1n4o7p0q3r6s9t2u5v8w1x4y7z0a3b6c9d2e5f8g1h4i7j0k3l6m9n2o5p8q1r4s7t0u3v6w9x2y5z8a1b4c7d0e3f6g9h2i5j8k1l4m7n0o3p6q8s0u2w4y6a8c0e2g4i6k8m0o2q4s6u8w0y2a4c6e8g0i2k4m6o8q0s2u4w6y8a0c2e4g6i8k0m2o4q6s8u0w2y4a6c8e0g2i4k6m8o0q2s4u6w8y0a2c4e6g8i0k2m4o6q8s0u2w4y6a8c0e2g4i6k8m0o2q4s6u8w0y2a4c6e8g0i2k4m6o8q0s2u4w4';  // Token real y válido
+console.log("=== Power Magia Mexicana Unida – Headless Server ===");
 
-// DETECCIÓN DE CHROME
-let executablePath = '/opt/render/project/.chrome/chrome';
-const versionFolders = fs.readdirSync(executablePath).filter(f => f.startsWith('linux-'));
-const latestVersion = versionFolders.sort().reverse()[0];
-executablePath = path.join(executablePath, latestVersion, 'chrome-linux64', 'chrome');
-console.log('Chrome detectado en:', executablePath);
+// =============================
+// 1. TOKEN
+// =============================
+const TOKEN = process.env.HAXBALL_TOKEN || 'thr1.AAAAAGkpHq1mF4a9tyRYdA.HE2rF-R3FlE';
 
-(async () => {
-    try {
-        const browser = await puppeteer.launch({
-            headless: 'new',
-            executablePath,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-first-run', '--single-process']
-        });
+// =============================
+// 2. DETECCIÓN DE CHROME PARA RENDER
+// =============================
+function findChrome() {
+    const paths = [
+        '/opt/render/project/.chrome/chrome',
+        '/opt/render/.cache/puppeteer/chrome',
+        '/opt/render/project/.cache/puppeteer/chrome'
+    ];
 
-        const page = await browser.newPage();
-        page.on('console', msg => console.log('BROWSER:', msg.text()));
-        page.on('pageerror', err => console.error('ERROR:', err));
+    for (const base of paths) {
+        try {
+            if (!fs.existsSync(base)) continue;
 
-        console.log('Cargando Haxball con token válido...');
-        await page.goto(`https://www.haxball.com/headless#${TOKEN}`);
+            const versions = fs.readdirSync(base).filter(f => f.startsWith('linux-'));
+            if (!versions.length) continue;
 
-        await page.waitForFunction('typeof window.HBInit === "function"', { timeout: 40000 });
+            const latest = versions.sort().reverse()[0];
+            const chromePath = path.join(base, latest, 'chrome-linux64', 'chrome');
 
-        await page.exposeFunction('onRoomLink', link => {
-            console.log('¡SALA CREADA! LINK REAL →', link);
-            console.log('ENTRA AQUÍ PARA JUGAR →', link);
-        });
-
-        // CREAR LA SALA PRIMERO
-        await page.evaluate(() => {
-            window.HBInit({
-                roomName: "Power Magia Mexicana Unida ⚽🇲🇽",
-                maxPlayers: 16,
-                public: true,
-                noPlayer: true,
-                onRoomLink: window.onRoomLink
-            });
-        });
-
-        // ESPERA EL LINK + FALLBACK MEJORADO (este SÍ lo saca siempre)
-        await new Promise(r => setTimeout(r, 35000)); // 35 segundos seguros
-
-        const realLink = await page.evaluate(() => {
-            // Método 1: iframe normal
-            const iframe = document.querySelector('iframe');
-            if (iframe && iframe.src && iframe.src.includes('a=thr')) {
-                return iframe.src.replace('headless', 'play');
+            if (fs.existsSync(chromePath)) {
+                console.log("Chrome encontrado en:", chromePath);
+                return chromePath;
             }
-            // Método 2: busca en el HTML directamente (nunca falla)
-            const match = document.body.innerHTML.match(/https:\/\/www\.haxball\.com\/headless\?a=([a-z0-9]+)/);
-            if (match) {
-                return 'https://www.haxball.com/play?a=' + match[1];
-            }
-            return null;
-        });
-
-        if (realLink) {
-            console.log('════════════════════════════════════════════════');
-            console.log('¡SALA 100% ACTIVA! LINK OFICIAL:');
-            console.log(realLink);
-            console.log('¡ENTRA YA Y ROMPELA! →', realLink);
-            console.log('════════════════════════════════════════════════');
-        } else {
-            console.log('Link aún no visible, espera 20 segundos más y refresca los logs');
-        }
-
-        // Configuración con doble retry (nunca falla)
-        await page.evaluate(() => {
-            const applyConfig = () => {
-                if (window.room) {
-                    window.room.setDefaultStadium("Big");
-                    window.room.setScoreLimit(7);
-                    window.room.setTimeLimit(0);
-                    window.room.setTeamsLock(false);
-                    console.log('¡CONFIGURACIÓN APLICADA! Estadio Big, sin tiempo, 7 goles');
-                }
-            };
-            applyConfig();
-            setTimeout(applyConfig, 10000);
-            setTimeout(applyConfig, 20000);
-        });
-
-        console.log('POWER MAGIA MEXICANA UNIDA ESTÁ ON FIRE 24/7');
-        process.stdin.resume();
-    } catch (err) {
-        console.error('ERROR:', err);
-        process.exit(1);
+        } catch (err) {}
     }
+
+    throw new Error("❌ NO SE ENCONTRÓ CHROME EN RENDER");
+}
+
+const executablePath = findChrome();
+
+// =============================
+// 3. INICIO DEL BROWSER
+// =============================
+(async () => {
+    console.log("Iniciando Puppeteer...");
+    const browser = await puppeteer.launch({
+        headless: true,
+        executablePath,
+        args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--no-zygote",
+            "--single-process"
+        ]
+    });
+
+    const page = await browser.newPage();
+
+    // =============================
+    // 4. CAPTURAR LINK DEL HEADLESS (MÉTODO NUEVO)
+    // =============================
+    page.on("console", msg => {
+        const txt = msg.text();
+        console.log("BROWSER:", txt);
+
+        if (txt.startsWith("Room link:")) {
+            const headless = txt.replace("Room link:", "").trim();
+            const play = headless.replace("headless", "play");
+
+            console.log("══════════════════════════════════════");
+            console.log("🔥 ¡SALA CREADA EXITOSAMENTE! 🔥");
+            console.log("LINK PARA ENTRAR →", play);
+            console.log("══════════════════════════════════════");
+        }
+    });
+
+    // =============================
+    // 5. Cargar HaxBall
+    // =============================
+    console.log("Cargando headless con token...");
+    await page.goto(`https://www.haxball.com/headless#${TOKEN}`);
+
+    // Esperar que HBInit exista
+    await page.waitForFunction(() => typeof window.HBInit === "function");
+
+    // =============================
+    // 6. Crear sala
+    // =============================
+    await page.evaluate(() => {
+        const room = HBInit({
+            roomName: "🇲🇽 POWER MAGIA MEXICANA UNIDA ⚽🔥",
+            maxPlayers: 16,
+            public: true,
+            noPlayer: true
+        });
+
+        room.setDefaultStadium("Big");
+        room.setScoreLimit(7);
+        room.setTimeLimit(0);
+
+        console.log("Sala creada correctamente. Configuración aplicada.");
+    });
+
+    console.log("Servidor HaxBall activo 24/7 ✔");
+
+    process.stdin.resume();
 })();
+    
+
+// =====================================================================
+// SERVIDOR HTTP REQUERIDO PARA RENDER (NECESARIO PARA WEB SERVICE GRATIS)
+// =====================================================================
+const http = require("http");
+const PORT = process.env.PORT || 10000;
+
+http.createServer((req, res) => {
+    res.writeHead(200, {"Content-Type": "text/plain"});
+    res.end("Power Magia Mexicana Unida está corriendo 🔥\n");
+}).listen(PORT, () => {
+    console.log("Servidor HTTP para Render activo en el puerto:", PORT);
+});
