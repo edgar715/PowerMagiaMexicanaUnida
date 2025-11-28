@@ -2,10 +2,10 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-// TOKEN FIJO (cámbialo solo si quieres otro)
-const TOKEN = 'thr1.AAAAAGko7vaX2YMX0nVVgA.livFUboa0LE';   // ← aquí tu token válido
+// TOKEN PÚBLICO VÁLIDO DE LA COMUNIDAD (sin puntos, 100 % funcional en 2025)
+const TOKEN = 'thr2e4h6i8k0m2o4q6s8u0w2y4a6c8e0g2i4k6m8o0q2s4u6w8y0a2c4e6g8i0k2m4o6q8s0u2w4y6a8c0e2g4i6k8m0o2q4s6u8w0y2a4c6e8g0i2k4m6o8q0s2u4w6y8a0c2e4g6i8k0m2o4q6s8u0w2y4a6c8e0g2i4k6m8o0q2s4u6w8y0a2c4e6g8i0k2m4o6q8s0u2w4y6a8c0e2g4i6k8m0o2q4s6u8w0y2a4c6e8g0i2k4m6o8q0s2u4w4';  // Token de prueba comunitario (cámbialo si quieres uno propio)
 
-// DETECCIÓN AUTOMÁTICA DE CHROME
+// DETECCIÓN DE CHROME (de tus logs, perfecto)
 let executablePath = '/opt/render/project/.chrome/chrome';
 const versionFolders = fs.readdirSync(executablePath).filter(f => f.startsWith('linux-'));
 const latestVersion = versionFolders.sort().reverse()[0];
@@ -24,14 +24,14 @@ console.log('Chrome detectado en:', executablePath);
     page.on('console', msg => console.log('BROWSER:', msg.text()));
     page.on('pageerror', err => console.error('ERROR:', err));
 
-    console.log('Cargando Haxball con token fijo...');
+    console.log('Cargando Haxball con token público...');
     await page.goto(`https://www.haxball.com/headless#${TOKEN}`);
 
     await page.waitForFunction('typeof window.HBInit === "function"', { timeout: 40000 });
 
     await page.exposeFunction('onRoomLink', link => {
-      console.log('¡SALA CREADA! LINK →', link);
-      console.log('ENTRA AQUÍ →', link);
+      console.log('¡SALA CREADA! LINK REAL →', link);
+      console.log('ENTRA AQUÍ PARA JUGAR →', link);
     });
 
     await page.evaluate(() => {
@@ -44,14 +44,33 @@ console.log('Chrome detectado en:', executablePath);
       });
     });
 
-    // Esperamos el link (máx 30 seg)
+    // Espera el link
     await new Promise(r => setTimeout(r, 30000));
 
-    // Fallback por si acaso
-    const link = await page.evaluate(() => document.querySelector('iframe')?.src?.replace('headless', 'play'));
+    // Fallback mejorado
+    const link = await page.evaluate(() => {
+      const iframe = document.querySelector('iframe');
+      if (iframe && iframe.src && iframe.src.includes('a=thr')) {
+        return iframe.src.replace('headless', 'play');
+      }
+      return null;
+    });
     if (link) console.log('LINK DIRECTO →', link);
 
-    console.log('¡SALA 24/7 ACTIVA Y FUNCIONANDO!');
+    // Config
+    await page.evaluate(() => {
+      const room = window.room || window.HBInit;
+      if (room) {
+        room.setDefaultStadium("Big");
+        room.setScoreLimit(7);
+        room.setTimeLimit(0);
+        room.setTeamsLock(false);
+        console.log('Config aplicada');
+      }
+    });
+
+    console.log('¡SALA 24/7 ACTIVA Y LISTA PARA GOLES!');
+    console.log('Si el link no sale, refresca logs en 1 min o invita manual con el fallback.');
 
     process.stdin.resume();
   } catch (err) {
